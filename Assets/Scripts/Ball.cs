@@ -10,6 +10,7 @@ public class Ball : MonoBehaviour
     private float startingMouseHeight;
     private CinemachineFreeLook cinemachineFreeLook;
 
+    private Vector3 lastShotPosition; // Stores the last shot position
     private const int mouseDownCode = 0;
     private const float speedEpsilon = 0.01f;
 
@@ -32,6 +33,9 @@ public class Ball : MonoBehaviour
         {
             Debug.LogError("No cinemachine free look found in children of golf ball object.");
         }
+
+        // Initialize the last shot position to the ball's starting position
+        lastShotPosition = transform.position;
     }
 
     void Update()
@@ -54,7 +58,7 @@ public class Ball : MonoBehaviour
 
     void FixedUpdate()
     {
-        //Help stop ball when slow enough
+        // Help stop ball when slow enough
         if (rigidBody.velocity.magnitude > speedEpsilon && rigidBody.velocity.magnitude < deaccelerationStart)
         {
             float speed = deaccelerationSpeed * Time.deltaTime;
@@ -68,18 +72,39 @@ public class Ball : MonoBehaviour
     {
         if (!rigidBody.IsSleeping())
         {
-            //We are in motion, no further movement should be done
+            // We are in motion, no further movement should be done
             return;
         }
 
-        //Can't shoot backwards
+        // Can't shoot backwards
         mouseOffset = math.abs(mouseOffset);
 
-        //Only shoot in Z direction which will be forward relative to camera
+        // Only shoot in Z direction which will be forward relative to camera
         Vector3 freelookCamForward = cinemachineFreeLook.State.FinalOrientation.normalized * Vector3.forward;
         freelookCamForward *= mouseOffset;
 
         freelookCamForward = Vector3.ClampMagnitude(freelookCamForward, maxForce);
         rigidBody.AddForce(freelookCamForward);
+
+        // Update last shot position
+        lastShotPosition = transform.position;
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("ResetPlane"))
+        {
+            ResetBall();
+        }
+    }
+
+    private void ResetBall()
+    {
+        // Stop all motion
+        rigidBody.velocity = Vector3.zero;
+        rigidBody.angularVelocity = Vector3.zero;
+
+        // Reset position to the last shot position
+        transform.position = lastShotPosition;
     }
 }
